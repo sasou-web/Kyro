@@ -1,0 +1,60 @@
+{
+  "productName": "Kyro",
+  "version": "1.0.0",
+  "identifier": "app.kyro",
+  "build": {
+    "frontendDist": "../frontend/build",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "npm run dev --prefix ../frontend",
+    "beforeBuildCommand": "npm run build --prefix ../frontend"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Kyro",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 960,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true,
+        "decorations": true
+      }
+    ],
+    "security": {
+      "assetProtocol": {
+        "enable": true,
+        "scope": [
+          "$APPDATA/posters/**",
+          "$APPDATA/posters/*"
+        ]
+      },
+      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost https://asset.localhost data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' ipc: http://ipc.localhost"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["msi", "nsis"],
+    "publisher": "Kyro",
+    "icon": [
+      "icons/icon.ico"
+    ],
+    "resources": [],
+    "externalBin": ["binaries/ffprobe"],
+    "windows": {
+      "wix": {
+        "language": ["fr-FR", "en-US"],
+        "upgradeCode": "4f6e1c14-3b7a-4d3a-9d2c-9c2c8e8b6f01"
+      },
+      "nsis": {
+        "displayLanguageSelector": false,
+        "installMode": "perMachine",
+        "languages": ["French", "English"],
+        "installerHooks": "scripts/nsis-uninstall-hooks.nsh"
+      }
+    }
+  }
+}

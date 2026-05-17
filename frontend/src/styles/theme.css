@@ -1,0 +1,261 @@
+/*
+ * Kyro_Theme — Tokens Adwaita Dark (par défaut) et Adwaita Light.
+ *
+ * Ce fichier définit l'intégralité des variables CSS du thème Kyro_Theme telles
+ * que spécifiées dans `design.md` (section « Tokens du thème Adwaita Dark »)
+ * et le requirement 16. Les blocs `:root[data-theme="..."]` permettent au
+ * basculement clair/sombre (requirement 16.14, implémenté en tâche 13.4) de se
+ * faire en modifiant l'attribut `data-theme` sur l'élément `<html>`.
+ *
+ * Au premier démarrage, la valeur par défaut est `adwaita-dark` (requirement 16.1).
+ *
+ * En plus des 12 tokens du Requirement 16, on définit ici des tokens de
+ * « motion » (durée + easing) et un système d'élévation hover, communs aux
+ * deux thèmes. Ces tokens sont volontairement scope-libre — ils sortent du
+ * périmètre Requirement 16 (qui ne couvre que la palette / typographie) mais
+ * permettent d'unifier les transitions de toute l'app.
+ */
+
+:root[data-theme="adwaita-dark"] {
+  /* Backgrounds */
+  --bg-primary:    #1e1e2e;   /* 16.2 */
+  --bg-secondary:  #242535;   /* 16.3 */
+  --surface:       #2a2b3d;   /* 16.4 */
+
+  /* Borders */
+  --border:        #383a4f;   /* 16.5 */
+
+  /* Text */
+  --text-primary:   #e6e6ec;  /* 16.6 */
+  --text-secondary: #a8a8b5;  /* 16.7 */
+
+  /* Accent (bleu, jamais violet/néon — 16.13) */
+  --accent:        #3584e4;   /* 16.8 */
+  --accent-hover:  #1c71d8;   /* 16.9 */
+
+  /* Radii */
+  --radius-card:    12px;     /* 16.10 */
+  --radius-control: 8px;      /* 16.11 */
+
+  /* Typography (16.12) */
+  --font-family: "Inter", -apple-system, "Segoe UI", system-ui, sans-serif;
+
+  /* Spacing scale (cohérence visuelle desktop premium) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* Elevation */
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.25);
+  --shadow-card-hover: 0 4px 8px rgba(0, 0, 0, 0.5), 0 16px 40px rgba(0, 0, 0, 0.45);
+
+  /* Couleurs sémantiques pour les états (warning / error / success) */
+  --color-warning: #f5c211;
+  --color-error:   #e01b24;
+  --color-success: #26a269;
+
+  /* Couche d'overlay pour les modales / backdrops */
+  --overlay-scrim: rgba(0, 0, 0, 0.55);
+
+  /* Scrollbar */
+  --scrollbar-thumb: #3a3c52;
+  --scrollbar-thumb-hover: #4d4f6a;
+  --scrollbar-track: transparent;
+
+  /* Skeleton loader (placeholder shimmer) */
+  --skeleton-base: #2a2b3d;
+  --skeleton-highlight: #3a3c52;
+}
+
+/* Thème clair équivalent (16.14) — palette Adwaita light cohérente */
+:root[data-theme="adwaita-light"] {
+  --bg-primary:    #fafafb;
+  --bg-secondary:  #f0f0f3;
+  --surface:       #ffffff;
+  --border:        #d3d4dc;
+  --text-primary:  #1d1d22;
+  --text-secondary:#5c5d6b;
+  --accent:        #3584e4;
+  --accent-hover:  #1c71d8;
+  --radius-card:    12px;
+  --radius-control: 8px;
+  --font-family: "Inter", -apple-system, "Segoe UI", system-ui, sans-serif;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-card-hover: 0 2px 4px rgba(0, 0, 0, 0.08), 0 12px 32px rgba(0, 0, 0, 0.12);
+
+  --color-warning: #b58900;
+  --color-error:   #c01c28;
+  --color-success: #1d7e44;
+
+  --overlay-scrim: rgba(0, 0, 0, 0.35);
+
+  --scrollbar-thumb: #c2c4cc;
+  --scrollbar-thumb-hover: #a3a5ad;
+  --scrollbar-track: transparent;
+
+  --skeleton-base: #ececef;
+  --skeleton-highlight: #f7f7fa;
+}
+
+/*
+ * Tokens de motion communs aux deux thèmes — placés en dehors de
+ * `:root[data-theme="..."]` pour ne pas dépendre de l'attribut.
+ * Durées calibrées pour une UI desktop (rapide mais perceptible).
+ * Easing « standard » (cubic-bezier déterministe) pour homogénéité.
+ */
+:root {
+  --duration-instant: 80ms;
+  --duration-fast:    140ms;
+  --duration-base:    200ms;
+  --duration-slow:    320ms;
+
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.3, 0, 0, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+}
+
+/*
+ * Réglages globaux supplémentaires : on désactive toutes les
+ * transitions et animations quand l'utilisateur a `prefers-reduced-
+ * motion` activé (accessibilité). On garde les couleurs et les
+ * focus rings, mais aucun mouvement.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Règles globales — appliquent les tokens aux éléments primitifs.
+
+   `margin: 0` + `height: 100%` + `overflow: hidden` sur `html`/`body`
+   sont indispensables pour que `.app { height: 100vh }` du layout
+   racine occupe **exactement** la fenêtre. Sans ça, la marge par
+   défaut de `<body>` (8 px UA) ferait dépasser `.app` et la fenêtre
+   deviendrait scrollable, ce qui couperait le footer Sidebar
+   « Rafraîchir ». */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+}
+
+/* Reset universel `border-box` : indispensable pour que les composants
+   à hauteur fixe (`.sidebar { height: 100vh }`) intègrent leur padding
+   dans les 100vh au lieu de l'ajouter par-dessus. Sans ça, le footer
+   « Rafraîchir » de la Sidebar dépassait la fenêtre et était coupé. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Scrollbar Adwaita Dark / Light — WebKit (Chromium). */
+*::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 6px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+  background-clip: padding-box;
+}
+
+/* Sélection de texte cohérente avec l'accent. */
+::selection {
+  background: var(--accent);
+  color: var(--text-primary);
+}
+
+/* Focus ring uniforme sur tous les éléments interactifs au clavier. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+button,
+input,
+select {
+  border-radius: var(--radius-control);
+}
+
+button.primary {
+  background: var(--accent);
+  color: var(--text-primary);
+}
+
+button.primary:hover {
+  background: var(--accent-hover);
+}
+
+/* ---------------------------------------------------------------- */
+/* Animations réutilisables                                         */
+/* ---------------------------------------------------------------- */
+
+/* Fade + glissement subtil pour les éléments qui apparaissent. */
+@keyframes kyro-fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Fade simple (sans glissement). */
+@keyframes kyro-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Shimmer pour les skeletons. */
+@keyframes kyro-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Petit pulse pour les indicateurs « en cours » subtils. */
+@keyframes kyro-pulse {
+  0%, 100% { opacity: 0.85; }
+  50%      { opacity: 0.5;  }
+}

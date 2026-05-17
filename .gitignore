@@ -1,0 +1,31 @@
+# Rust / Cargo
+/src-tauri/target/
+**/*.rs.bk
+
+# Build artefacts (release sur GitHub Releases, pas committés)
+/dist/
+
+# Logs cargo / build divers
+/src-tauri/cargo-check.log
+
+# Frontend / Node
+/frontend/node_modules/
+/frontend/.svelte-kit/
+/frontend/build/
+/frontend/.vite/
+
+# Tauri (Cargo.lock conservé pour les binaires)
+/src-tauri/gen/
+
+# Sidecar ffprobe : binaire LGPL non committé (cf. src-tauri/binaries/README.md)
+/src-tauri/binaries/*.exe
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/settings.json
+
+# Fichiers temporaires de scripts
+tmp_check.ps1

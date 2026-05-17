@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Kyro — favicon SVG minimal.
+
+  Carré arrondi sur fond bleu Adwaita (#3584e4, cf. requirement 16.8)
+  avec la lettre "K" en blanc, alignée sur la palette Adwaita Dark
+  utilisée par le reste de l'UI (theme.css). Tout est inline pour
+  garantir zéro requête réseau (requirement 6.4 / 17.3).
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Kyro">
+  <rect x="0" y="0" width="64" height="64" rx="12" ry="12" fill="#3584e4"/>
+  <path d="M20 14 L20 50 L26 50 L26 36 L34 50 L42 50 L31 32 L42 14 L34 14 L26 27 L26 14 Z"
+        fill="#ffffff" stroke="none"/>
+</svg>

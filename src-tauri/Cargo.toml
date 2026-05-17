@@ -1,0 +1,122 @@
+[package]
+name = "kyro"
+version = "1.0.0"
+description = "Kyro — bibliothèque média locale Windows (Tauri 2)"
+authors = ["Kyro"]
+edition = "2021"
+
+# ---------------------------------------------------------------------------
+# Tâche 1.2 — dépendances backend Rust.
+#
+# Toutes les versions sont épinglées exactement (`=X.Y.Z`) pour garantir la
+# reproductibilité du build (requirement 17.3) et éviter qu'un patch amont
+# introduise une dépendance HTTP transitive.
+#
+# Garantie zéro réseau (requirements 6.4, 17.3 — voir design « Garantie
+# zéro réseau ») :
+#   * AUCUNE dépendance HTTP n'est listée ici. En particulier `reqwest`,
+#     `ureq`, `hyper-client`, `surf`, `isahc` sont strictement interdits.
+#   * `sqlx` est configuré sans `default-features` (pas de `native-tls`),
+#     uniquement avec `runtime-tokio-rustls` + `sqlite` + `macros` +
+#     `migrate`.
+#   * `tauri` est configuré sans features réseau (allowlist HTTP non
+#     activée). Seule la feature `custom-protocol` est activable en
+#     production via le feature flag du même nom plus bas.
+#   * Une feature flag `network` (désactivée par défaut) est réservée pour
+#     de futurs usages opt-in explicites (voir design).
+# ---------------------------------------------------------------------------
+
+[build-dependencies]
+# Bumpé de 2.0.3 → 2.6.2 pour compatibilité avec les transitives
+# `tauri-runtime-wry` / `wry` actuelles. Reste épinglé exactement.
+tauri-build = { version = "=2.6.2", features = [] }
+
+[dependencies]
+# Shell desktop — pas de feature réseau / allowlist HTTP activée.
+# Bumpé de 2.1.1 → 2.11.2 pour aligner avec les transitives Tauri
+# disponibles dans le registre. Reste épinglé exactement (req 17.3).
+tauri = { version = "=2.11.2", features = ["protocol-asset"] }
+
+# Plugin de dialogues natifs (open file picker) — tâche 14.7
+# (Requirements 6.2, 6.3). Aucune dépendance HTTP : ce plugin
+# expose uniquement des dialogues système Win32 (IFileDialog).
+tauri-plugin-dialog = { version = "=2.4.0", default-features = false }
+
+# Async runtime — features explicitement listées (tâche 1.2).
+tokio = { version = "=1.40.0", features = [
+    "rt-multi-thread",
+    "fs",
+    "net",
+    "process",
+    "sync",
+    "io-util",
+    "macros",
+    "time",
+] }
+
+# Persistance SQLite. `default-features = false` neutralise `native-tls`
+# et tout backend HTTP transitif. Seules les features strictement
+# nécessaires sont activées.
+sqlx = { version = "=0.8.2", default-features = false, features = [
+    "runtime-tokio-rustls",
+    "sqlite",
+    "macros",
+    "migrate",
+] }
+
+# Sérialisation / désérialisation.
+serde = { version = "=1.0.210", features = ["derive"] }
+serde_json = "=1.0.128"
+
+# Gestion d'erreurs (`KyroError` thiserror, `anyhow` pour les chemins
+# critiques d'init).
+thiserror = "=1.0.64"
+anyhow = "=1.0.89"
+
+# Domaine pur — parser, scanner, IDs.
+regex = "=1.11.0"
+walkdir = "=2.5.0"
+uuid = { version = "=1.10.0", features = ["v4"] }
+unicode-normalization = "=0.1.24"
+
+# Résolution de chemins systèmes / binaires.
+dirs = "=5.0.1"
+which = "=6.0.3"
+
+# Logging structuré + RollingFileAppender quotidien (design § Logs).
+tracing = "=0.1.40"
+tracing-subscriber = { version = "=0.3.18", features = ["env-filter", "json"] }
+tracing-appender = "=0.2.3"
+
+# Watcher filesystem cross-platform (ReadDirectoryChangesW sur Windows).
+# Aucune dépendance réseau ; uniquement des bindings vers les API
+# système. Permet la détection automatique des ajouts / suppressions
+# de fichiers dans les library_folder sans cliquer sur « Rafraîchir ».
+notify = { version = "=6.1.1", default-features = false, features = ["macos_kqueue"] }
+
+# Sauvegarde / restauration de la bibliothèque (v1.0). Création
+# d'archives ZIP contenant la copie SQLite cohérente + le dossier
+# posters/. `default-features = false` désactive `bzip2` (binding C
+# inutile : on n'utilise que `deflate`, l'algorithme par défaut du
+# format ZIP).
+zip = { version = "=2.4.2", default-features = false, features = ["deflate"] }
+
+[dev-dependencies]
+# Property-based testing pour le domaine pur (37 propriétés du design).
+proptest = "=1.5.0"
+# Tempfile pour les tests d'intégration repo / scanner.
+tempfile = "=3.13.0"
+# Pattern matching ergonomique dans les tests.
+assert_matches = "=1.5.0"
+# Helpers asynchrones pour les tests `tokio` (mock pipes, etc.).
+tokio-test = "=0.4.4"
+
+[features]
+# Activé en build de production pour que la WebView serve l'UI bundlée via
+# le protocole personnalisé de Tauri.
+custom-protocol = ["tauri/custom-protocol"]
+
+# Feature flag réservée pour de futurs usages réseau opt-in (voir design
+# « Garantie zéro réseau »). Désactivée par défaut — n'active aucune
+# dépendance HTTP tant qu'elle n'est pas branchée explicitement.
+network = []
