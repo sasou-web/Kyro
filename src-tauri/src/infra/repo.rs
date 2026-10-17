@@ -3628,7 +3628,8 @@ mod tests {
 
     use crate::infra::settings_keys::{
         RESERVED_KEYS, SETTING_KEY_EXTERNAL_PLAYER_PATH, SETTING_KEY_FFPROBE_PATH,
-        SETTING_KEY_LAST_CATEGORY, SETTING_KEY_SCAN_AT_STARTUP, SETTING_KEY_THEME,
+        SETTING_KEY_LAST_CATEGORY, SETTING_KEY_PLAYBACK_MODE, SETTING_KEY_SCAN_AT_STARTUP,
+        SETTING_KEY_THEME,
     };
 
     #[test]
@@ -3710,6 +3711,7 @@ mod tests {
                 (SETTING_KEY_THEME, "adwaita-light"),
                 (SETTING_KEY_SCAN_AT_STARTUP, "true"),
                 (SETTING_KEY_LAST_CATEGORY, "Series"),
+                (SETTING_KEY_PLAYBACK_MODE, "embedded"),
             ];
             for (k, v) in cases {
                 repo.upsert_setting(k, v)
@@ -3717,13 +3719,13 @@ mod tests {
                     .unwrap_or_else(|e| panic!("upsert {k:?} doit réussir, got {e:?}"));
             }
 
-            // Sanity : on retombe sur exactement 5 lignes (= cardinal
+            // Sanity : on retombe sur exactement 6 lignes (= cardinal
             // de l'allowlist).
             for (k, v) in cases {
                 let read = repo.get_setting(k).await.unwrap();
                 assert_eq!(read.as_deref(), Some(v));
             }
-            assert_eq!(RESERVED_KEYS.len(), 5);
+            assert_eq!(RESERVED_KEYS.len(), 6);
         });
     }
 

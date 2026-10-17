@@ -41,9 +41,9 @@ const mocks = vi.hoisted(() => {
   return {
     getMediaItem: vi.fn(),
     listEpisodes: vi.fn(),
-    playMedia: vi.fn(async () => undefined),
-    playResume: vi.fn(async () => undefined),
-    playRewatchFromStart: vi.fn(async () => undefined),
+    launchPlayback: vi.fn(async () => undefined),
+    launchResume: vi.fn(async () => undefined),
+    launchRewatchFromStart: vi.fn(async () => undefined),
     toggleFavorite: vi.fn(async () => true),
     toggleToWatch: vi.fn(async () => true),
     pageStore: undefined as
@@ -55,11 +55,14 @@ const mocks = vi.hoisted(() => {
 vi.mock('$lib/api/commands', () => ({
   getMediaItem: mocks.getMediaItem,
   listEpisodes: mocks.listEpisodes,
-  playMedia: mocks.playMedia,
-  playResume: mocks.playResume,
-  playRewatchFromStart: mocks.playRewatchFromStart,
   toggleFavorite: mocks.toggleFavorite,
   toggleToWatch: mocks.toggleToWatch
+}));
+
+vi.mock('$lib/api/player-window', () => ({
+  launchPlayback: mocks.launchPlayback,
+  launchResume: mocks.launchResume,
+  launchRewatchFromStart: mocks.launchRewatchFromStart
 }));
 
 vi.mock('$app/stores', async () => {
@@ -145,12 +148,12 @@ async function flushAsync(): Promise<void> {
 beforeEach(() => {
   mocks.getMediaItem.mockReset();
   mocks.listEpisodes.mockReset();
-  mocks.playMedia.mockReset();
-  mocks.playMedia.mockResolvedValue(undefined);
-  mocks.playResume.mockReset();
-  mocks.playResume.mockResolvedValue(undefined);
-  mocks.playRewatchFromStart.mockReset();
-  mocks.playRewatchFromStart.mockResolvedValue(undefined);
+  mocks.launchPlayback.mockReset();
+  mocks.launchPlayback.mockResolvedValue(undefined);
+  mocks.launchResume.mockReset();
+  mocks.launchResume.mockResolvedValue(undefined);
+  mocks.launchRewatchFromStart.mockReset();
+  mocks.launchRewatchFromStart.mockResolvedValue(undefined);
   mocks.toggleFavorite.mockReset();
   mocks.toggleFavorite.mockResolvedValue(true);
   mocks.toggleToWatch.mockReset();
@@ -199,7 +202,7 @@ describe('/detail/[id] +page.svelte — Film', () => {
     expect(chips).toHaveLength(2);
   });
 
-  it('affiche le bouton "Lire" et appelle playMedia(id, "media")', async () => {
+  it('affiche le bouton "Lire" et appelle launchPlayback(id, "media")', async () => {
     mocks.getMediaItem.mockResolvedValue(FILM_FIXTURE);
 
     const { queryByTestId } = render(DetailPage);
@@ -211,9 +214,9 @@ describe('/detail/[id] +page.svelte — Film', () => {
 
     await fireEvent.click(playBtn);
     await waitFor(() => {
-      expect(mocks.playMedia).toHaveBeenCalledTimes(1);
+      expect(mocks.launchPlayback).toHaveBeenCalledTimes(1);
     });
-    expect(mocks.playMedia).toHaveBeenCalledWith(42, 'media');
+    expect(mocks.launchPlayback).toHaveBeenCalledWith(42, 'media');
 
     // Pas de bouton Reprendre / Revoir pour un film.
     expect(queryByTestId('detail-resume-button')).toBeNull();
@@ -247,7 +250,7 @@ describe('/detail/[id] +page.svelte — Série avec épisodes mixtes', () => {
     expect(mocks.listEpisodes).toHaveBeenCalledWith(7);
   });
 
-  it('affiche le bouton "Reprendre" et appelle playResume(id)', async () => {
+  it('affiche le bouton "Reprendre" et appelle launchResume(id)', async () => {
     mocks.getMediaItem.mockResolvedValue(SERIES_FIXTURE);
     mocks.listEpisodes.mockResolvedValue(SERIES_EPISODES_MIXED);
 
@@ -261,9 +264,9 @@ describe('/detail/[id] +page.svelte — Série avec épisodes mixtes', () => {
 
     await fireEvent.click(resumeBtn);
     await waitFor(() => {
-      expect(mocks.playResume).toHaveBeenCalledTimes(1);
+      expect(mocks.launchResume).toHaveBeenCalledTimes(1);
     });
-    expect(mocks.playResume).toHaveBeenCalledWith(7);
+    expect(mocks.launchResume).toHaveBeenCalledWith(7);
   });
 
   it('rend le compteur "1 / 4 épisodes vus" (Requirement 8.5)', async () => {
@@ -303,7 +306,7 @@ describe('/detail/[id] +page.svelte — Série avec épisodes mixtes', () => {
     expect(rows[3].getAttribute('data-episode-id')).toBe('200');
   });
 
-  it('cliquer sur "Lire" d\'un épisode appelle playMedia(epId, "episode")', async () => {
+  it('cliquer sur "Lire" d\'un épisode appelle launchPlayback(epId, "episode")', async () => {
     mocks.getMediaItem.mockResolvedValue(SERIES_FIXTURE);
     mocks.listEpisodes.mockResolvedValue(SERIES_EPISODES_MIXED);
 
@@ -317,9 +320,9 @@ describe('/detail/[id] +page.svelte — Série avec épisodes mixtes', () => {
 
     await fireEvent.click(playButtons[1] as HTMLButtonElement);
     await waitFor(() => {
-      expect(mocks.playMedia).toHaveBeenCalledTimes(1);
+      expect(mocks.launchPlayback).toHaveBeenCalledTimes(1);
     });
-    expect(mocks.playMedia).toHaveBeenCalledWith(101, 'episode');
+    expect(mocks.launchPlayback).toHaveBeenCalledWith(101, 'episode');
   });
 });
 
@@ -328,7 +331,7 @@ describe('/detail/[id] +page.svelte — Série tous épisodes vus', () => {
     mocks.pageStore?.set({ params: { id: '7' } });
   });
 
-  it('affiche "Revoir depuis le début" et appelle playRewatchFromStart(id) (Requirement 12.3)', async () => {
+  it('affiche "Revoir depuis le début" et appelle launchRewatchFromStart(id) (Requirement 12.3)', async () => {
     mocks.getMediaItem.mockResolvedValue(SERIES_FIXTURE);
     mocks.listEpisodes.mockResolvedValue(SERIES_EPISODES_ALL_WATCHED);
 
@@ -344,9 +347,9 @@ describe('/detail/[id] +page.svelte — Série tous épisodes vus', () => {
 
     await fireEvent.click(rewatchBtn);
     await waitFor(() => {
-      expect(mocks.playRewatchFromStart).toHaveBeenCalledTimes(1);
+      expect(mocks.launchRewatchFromStart).toHaveBeenCalledTimes(1);
     });
-    expect(mocks.playRewatchFromStart).toHaveBeenCalledWith(7);
+    expect(mocks.launchRewatchFromStart).toHaveBeenCalledWith(7);
   });
 
   it('affiche le compteur "2 / 2 épisodes vus" quand tous sont vus', async () => {

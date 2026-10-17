@@ -13,6 +13,7 @@
 //! | `theme`               | Requirement 16.1, 16.14 — thème actif   |
 //! | `scan_at_startup`     | Requirement 3.7 — scan au boot          |
 //! | `last_category`       | Requirement 7.1 — dernière catégorie    |
+//! | `playback_mode`       | Player embarqué — `embedded` (défaut) ou `external` |
 //!
 //! ## Pourquoi un *allowlist* explicite
 //!
@@ -65,6 +66,21 @@ pub const SETTING_KEY_SCAN_AT_STARTUP: &str = "scan_at_startup";
 /// `domain::types::Category::as_str`).
 pub const SETTING_KEY_LAST_CATEGORY: &str = "last_category";
 
+/// Clé `setting_value` portant le mode de lecture actif
+/// (player embarqué libmpv vs lecteur externe).
+///
+/// Valeurs acceptées :
+/// * `"embedded"` — lit via libmpv embarqué dans une fenêtre Kyro
+///   dédiée (défaut au premier démarrage si la DLL est présente).
+/// * `"external"` — lit via l'application externe configurée par
+///   `external_player_path` (mpv.net + IPC NDJSON ou autre lecteur).
+///
+/// La validation des valeurs est portée par
+/// [`crate::infra::repo::Repo::upsert_setting`] via la combinaison
+/// `is_reserved` (présence dans l'allowlist) + parsing applicatif
+/// côté `commands::settings::set_playback_mode`.
+pub const SETTING_KEY_PLAYBACK_MODE: &str = "playback_mode";
+
 /// Allowlist exhaustive des clés acceptées par
 /// [`crate::infra::repo::Repo::upsert_setting`].
 ///
@@ -78,6 +94,7 @@ pub const RESERVED_KEYS: &[&str] = &[
     SETTING_KEY_THEME,
     SETTING_KEY_SCAN_AT_STARTUP,
     SETTING_KEY_LAST_CATEGORY,
+    SETTING_KEY_PLAYBACK_MODE,
 ];
 
 /// Indique si `key` appartient à l'allowlist [`RESERVED_KEYS`].
@@ -107,6 +124,7 @@ mod tests {
                 "theme",
                 "scan_at_startup",
                 "last_category",
+                "playback_mode",
             ]
         );
     }

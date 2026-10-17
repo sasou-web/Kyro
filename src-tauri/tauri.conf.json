@@ -42,7 +42,9 @@
     "icon": [
       "icons/icon.ico"
     ],
-    "resources": [],
+    "resources": [
+      "binaries/libmpv-2.dll"
+    ],
     "externalBin": ["binaries/ffprobe"],
     "windows": {
       "wix": {

@@ -60,12 +60,14 @@
   import {
     getMediaItem,
     listEpisodes,
-    playMedia,
-    playResume,
-    playRewatchFromStart,
     toggleFavorite,
     toggleToWatch
   } from '$lib/api/commands';
+  import {
+    launchPlayback,
+    launchResume,
+    launchRewatchFromStart
+  } from '$lib/api/player-window';
   import { toAssetUrl } from '$lib/api/poster-url';
   import {
     EVENT_PLAYBACK_PROGRESS,
@@ -389,13 +391,13 @@
     try {
       switch (primaryAction.kind) {
         case 'play-film':
-          await playMedia(detail.id, 'media');
+          await launchPlayback(detail.id, 'media');
           break;
         case 'resume':
-          await playResume(detail.id);
+          await launchResume(detail.id);
           break;
         case 'rewatch':
-          await playRewatchFromStart(detail.id);
+          await launchRewatchFromStart(detail.id);
           // Après rewatch, la progression a été remise à zéro côté
           // backend. On rafraîchit la liste d'épisodes pour refléter
           // le nouveau statut local sans recharger toute la page.
@@ -423,7 +425,7 @@
     actionPending = true;
     actionError = null;
     try {
-      await playMedia(episodeId, 'episode');
+      await launchPlayback(episodeId, 'episode');
     } catch (err) {
       actionError = formatError(err);
     } finally {

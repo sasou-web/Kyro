@@ -284,39 +284,65 @@ pub(crate) async fn reset_all_episodes_progress(
     Ok(ids)
 }
 
-/// Lance la lecture d'un Media_Item ou d'un Episode_Item via le lecteur
-/// externe configuré.
+/// Lance la lecture d'un Media_Item ou d'un Episode_Item.
 ///
-/// Étapes :
-/// 1. **Setting `external_player_path`** — lu via `Repo::get_setting` ;
-///    absent → [`KyroError::Validation`] (`requirement 10.1`).
-/// 2. **Validation existence + `.exe`** —
-///    [`player_bridge::validate_external_player_path`] ; si l'erreur est
-///    une `Validation`, on émet [`EVENT_EXTERNAL_PLAYER_MISSING`] vers
-///    le frontend pour qu'il affiche un avis explicite, puis on
-///    retourne l'erreur (requirements 10.3, 10.4).
-/// 3. **Chargement de la cible** — `(file_path, watch_progress_seconds)`
-///    via [`load_target_info`].
-/// 4. **Lancement** — [`player_bridge::launch_player`] route entre la
-///    branche mpv.net (IPC + `--start=` + `--script-opts=`) et la
-///    branche lecteur tiers (chemin du fichier seul) selon le nom de
-///    l'exécutable.
-/// 5. **Branche `MpvNet`** — on attache [`ipc_pipe::listen`] sur le
-///    `pipe_name` de la session puis on spawn une task
-///    `run_ipc_session_emit` qui consomme le receiver, persiste la
-///    progression au fil des messages NDJSON et émet
-///    `playback-ended` à la fin de la session (requirements 9.3, 9.4).
-/// 6. **Branche `External`** — pas d'IPC, pas de pipe ; on émet
-///    [`EVENT_EXTERNAL_PLAYER_NON_MPV`] pour que le frontend affiche le
-///    badge « reprise exacte non garantie » sur la fiche du
-///    Media_Item courant (requirement 10.5).
-/// 7. **Retour immédiat** — la commande ne bloque pas : la session
-///    IPC continue dans la task spawnée, le frontend écoute les
-///    événements `playback-ended` / `external-player-non-mpv`.
+/// **Routing** : la commande lit le réglage `playback_mode` et choisit
+/// entre deux flux mutuellement exclusifs :
+///
+/// * `playback_mode = "embedded"` (défaut) — délègue à
+///   [`crate::commands::embedded_player::embedded_player_open`] qui
+///   crée une instance libmpv in-process. Pré-condition : la fenêtre
+///   Tauri `player` doit avoir été créée par le frontend AVANT cet
+///   appel.
+/// * `playback_mode = "external"` — utilise le lecteur externe
+///   configuré par `external_player_path` (mpv.net + IPC NDJSON ou
+///   autre exécutable). Branche historique préservée intégralement
+///   (cf. doc de l'ancien `play_media` ci-dessous, conservée pour
+///   référence).
 ///
 /// _Requirements: 9.1, 9.3, 9.4, 10.3, 10.4, 10.5, 12.4_
 #[tauri::command]
 pub async fn play_media(
+    app: tauri::AppHandle,
+    window: tauri::Window,
+    repo: tauri::State<'_, Repo>,
+    slot: tauri::State<'_, std::sync::Arc<crate::commands::embedded_player::EmbeddedPlayerSlot>>,
+    target_id: i64,
+    kind: String,
+) -> Result<(), KyroError> {
+    let mode = crate::commands::settings::get_playback_mode_with(repo.inner()).await?;
+
+    if mode == "embedded" {
+        // Délégation directe à la commande embedded_player_open : on
+        // duplique l'invocation à l'intérieur de Rust pour ne pas
+        // forcer le frontend à connaître les deux commandes.
+        return crate::commands::embedded_player::embedded_player_open(
+            app,
+            repo,
+            slot,
+            target_id,
+            kind,
+        )
+        .await;
+    }
+
+    // Mode "external" — flux historique inchangé.
+    play_media_external(window, repo, target_id, kind).await
+}
+
+/// Implémentation historique de `play_media` — mode externe
+/// (mpv.net + IPC NDJSON ou lecteur tiers). Conservée intégralement
+/// pour ne pas régresser le comportement déjà testé par les tâches
+/// 17.x.
+///
+/// Étapes (inchangées) :
+/// 1. Setting `external_player_path` (lecture obligatoire).
+/// 2. Validation existence + extension `.exe`.
+/// 3. `load_target_info` → `(file_path, watch_progress_seconds)`.
+/// 4. `launch_player` route mpv.net vs autre.
+/// 5. Branche `MpvNet` : `ipc_pipe::listen` + `run_ipc_session_emit`.
+/// 6. Branche `External` : émet `external-player-non-mpv`.
+async fn play_media_external(
     window: tauri::Window,
     repo: tauri::State<'_, Repo>,
     target_id: i64,
@@ -477,8 +503,10 @@ pub async fn play_media(
 /// _Requirements: 12.2, 12.3_
 #[tauri::command]
 pub async fn play_resume(
+    app: tauri::AppHandle,
     window: tauri::Window,
     repo: tauri::State<'_, Repo>,
+    slot: tauri::State<'_, std::sync::Arc<crate::commands::embedded_player::EmbeddedPlayerSlot>>,
     series_id: i64,
 ) -> Result<(), KyroError> {
     let next = repo
@@ -489,7 +517,7 @@ pub async fn play_resume(
                 "série id={series_id} sans épisode jouable pour la reprise"
             ))
         })?;
-    play_media(window, repo, next.get(), "episode".to_string()).await
+    play_media(app, window, repo, slot, next.get(), "episode".to_string()).await
 }
 
 /// Remet à 0 la progression de tous les épisodes de la série, puis
@@ -510,8 +538,10 @@ pub async fn play_resume(
 /// _Requirements: 12.3_
 #[tauri::command]
 pub async fn play_rewatch_from_start(
+    app: tauri::AppHandle,
     window: tauri::Window,
     repo: tauri::State<'_, Repo>,
+    slot: tauri::State<'_, std::sync::Arc<crate::commands::embedded_player::EmbeddedPlayerSlot>>,
     series_id: i64,
 ) -> Result<(), KyroError> {
     let series_id_typed = MediaItemId(series_id);
@@ -523,7 +553,7 @@ pub async fn play_rewatch_from_start(
         ))
     })?;
 
-    play_media(window, repo, first.get(), "episode".to_string()).await
+    play_media(app, window, repo, slot, first.get(), "episode".to_string()).await
 }
 
 #[cfg(test)]

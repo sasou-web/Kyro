@@ -81,6 +81,19 @@ fn main() {
             kyro::commands::playback::play_media,
             kyro::commands::playback::play_resume,
             kyro::commands::playback::play_rewatch_from_start,
+            // Embedded player (libmpv in-process).
+            kyro::commands::embedded_player::embedded_player_open,
+            kyro::commands::embedded_player::embedded_player_toggle_pause,
+            kyro::commands::embedded_player::embedded_player_seek,
+            kyro::commands::embedded_player::embedded_player_set_audio_track,
+            kyro::commands::embedded_player::embedded_player_set_subtitle_track,
+            kyro::commands::embedded_player::embedded_player_set_geometry,
+            kyro::commands::embedded_player::embedded_player_set_visible,
+            kyro::commands::embedded_player::embedded_player_set_volume,
+            kyro::commands::embedded_player::embedded_player_set_mute,
+            kyro::commands::embedded_player::embedded_player_set_speed,
+            kyro::commands::embedded_player::embedded_player_track_list,
+            kyro::commands::embedded_player::embedded_player_quit,
             // Settings — tâche 12.4.
             kyro::commands::settings::add_library_folder,
             kyro::commands::settings::remove_library_folder,
@@ -93,6 +106,8 @@ fn main() {
             kyro::commands::settings::get_theme,
             kyro::commands::settings::set_last_category,
             kyro::commands::settings::get_last_category,
+            kyro::commands::settings::set_playback_mode,
+            kyro::commands::settings::get_playback_mode,
             kyro::commands::settings::get_settings_summary,
             // Logs — tâche 12.5.
             kyro::commands::logs::read_latest_log,
@@ -266,6 +281,21 @@ fn main() {
             //    ad-hoc.
             app.manage(kyro::infra::repo::Repo::new(pool.clone()));
             app.manage(pool);
+
+            // 9.bis Slot global du player embarqué (libmpv in-process).
+            //    Une seule session active à la fois ; les commandes
+            //    `embedded_player_*` accèdent au slot via
+            //    `tauri::State<'_, Arc<EmbeddedPlayerSlot>>`.
+            app.manage(std::sync::Arc::new(
+                kyro::commands::embedded_player::EmbeddedPlayerSlot::new(),
+            ));
+
+            // 9.ter Câble le routage des clics / double-clics depuis
+            //       le HWND vidéo Win32 vers les events Tauri
+            //       `embedded-player-clicked` /
+            //       `embedded-player-double-clicked` consommés par
+            //       le composant <EmbeddedPlayer>.
+            kyro::commands::embedded_player::init_input_routing(app.handle().clone());
 
             // 10. Watcher filesystem (v1.0). Surveille tous les
             //     library_folder configurés et déclenche un scan

@@ -213,6 +213,8 @@ export interface SettingsSummary {
   /** Toujours présent ; défaut `"adwaita-dark"` au premier démarrage. */
   theme: string;
   last_category: Category | null;
+  /** Toujours présent ; défaut `"embedded"` au premier démarrage. */
+  playback_mode: 'embedded' | 'external';
 }
 
 // ---------------------------------------------------------------------------
@@ -335,3 +337,77 @@ export const EVENT_FFPROBE_MISSING = 'ffprobe-missing';
  * `events::EVENT_BACKEND_DEGRADED`.
  */
 export const EVENT_BACKEND_DEGRADED = 'backend-degraded';
+
+// ---------------------------------------------------------------------------
+// Player embarqué (libmpv chargé in-process). Aligné sur
+// `commands::embedded_player::EVENT_*` côté Rust.
+// ---------------------------------------------------------------------------
+
+/** Émis ~10 fois/s pendant la lecture embarquée pour pousser la
+ * position courante (et la durée totale dès qu'elle est connue). */
+export const EVENT_EMBEDDED_PLAYER_PROGRESS = 'embedded-player-progress';
+
+/** Payload de [`EVENT_EMBEDDED_PLAYER_PROGRESS`] et de
+ * [`EVENT_EMBEDDED_PLAYER_CLOSED`]. */
+export interface EmbeddedPlayerProgress {
+  position: number;
+  duration: number;
+}
+
+/** Émis quand mpv atteint `eof-reached = true` : permet à l'UI de
+ * basculer le statut "Vu" et d'enchaîner l'épisode suivant. */
+export const EVENT_EMBEDDED_PLAYER_COMPLETED = 'embedded-player-completed';
+
+/** Émis quand l'état pause/lecture change (clavier, espace, etc.). */
+export const EVENT_EMBEDDED_PLAYER_PAUSE_CHANGED = 'embedded-player-pause-changed';
+
+/** Payload de [`EVENT_EMBEDDED_PLAYER_PAUSE_CHANGED`]. */
+export interface EmbeddedPlayerPause {
+  paused: boolean;
+}
+
+/** Émis une seule fois quand la session libmpv est terminée
+ * (mpv_terminate_destroy). Plus aucun event ne suivra. */
+export const EVENT_EMBEDDED_PLAYER_CLOSED = 'embedded-player-closed';
+
+/** Émis quand l'utilisateur clique sur la zone vidéo (HWND mpv).
+ * Le frontend bascule pause / lecture en réaction. */
+export const EVENT_EMBEDDED_PLAYER_CLICKED = 'embedded-player-clicked';
+
+/** Émis quand l'utilisateur double-clique sur la zone vidéo.
+ * Le frontend bascule le plein écran système. */
+export const EVENT_EMBEDDED_PLAYER_DOUBLE_CLICKED =
+  'embedded-player-double-clicked';
+
+/** Modes de lecture acceptés par le réglage `playback_mode`. */
+export type PlaybackMode = 'embedded' | 'external';
+
+/**
+ * Élément de la `track-list` mpv. Spec officielle :
+ * https://mpv.io/manual/master/#command-interface-track-list
+ *
+ * Champs marqués optionnels (`?`) car mpv les omet selon le type
+ * de piste et la source.
+ */
+export interface MpvTrack {
+  id: number;
+  type: 'video' | 'audio' | 'sub';
+  /** Nom lisible. Souvent une langue ("French") ou un codec. */
+  title?: string;
+  /** Code langue ISO (ex. "fre", "eng", "jpn"). */
+  lang?: string;
+  /** Flag mpv : piste sélectionnée. */
+  selected?: boolean;
+  /** Flag mpv : piste par défaut côté conteneur. */
+  default?: boolean;
+  /** Flag mpv : piste forced (sous-titres forcés). */
+  forced?: boolean;
+  /** Codec (ex. "h264", "aac", "ass"). */
+  codec?: string;
+  /** Pour les pistes audio : nb de canaux (2, 6, 8...). */
+  'demux-channel-count'?: number;
+  /** Pour les pistes vidéo : largeur. */
+  'demux-w'?: number;
+  /** Pour les pistes vidéo : hauteur. */
+  'demux-h'?: number;
+}

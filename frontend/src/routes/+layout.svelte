@@ -35,6 +35,7 @@
   import Sidebar from '$lib/components/Sidebar.svelte';
   import TopBar from '$lib/components/TopBar.svelte';
   import ToastContainer from '$lib/components/ToastContainer.svelte';
+  import EmbeddedPlayer from '$lib/components/EmbeddedPlayer.svelte';
   import { setupEventListeners } from '$lib/api/events';
   import { initSettings } from '$lib/stores/init';
   import { flags, scanProgress } from '$lib/stores/library';
@@ -196,6 +197,7 @@
   </div>
 
   <ToastContainer />
+  <EmbeddedPlayer />
 </div>
 
 <style>

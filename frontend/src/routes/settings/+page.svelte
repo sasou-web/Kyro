@@ -75,6 +75,7 @@
     restoreLibraryBackup,
     setExternalPlayerPath,
     setFfprobePath,
+    setPlaybackMode,
     setScanAtStartup
   } from '$lib/api/commands';
   import type { Category } from '$lib/api/types';
@@ -429,6 +430,25 @@
     }
   }
 
+  /**
+   * Persiste le mode de lecture (`embedded` vs `external`). Appelé
+   * lors du changement du `<select>`. La bascule prend effet à la
+   * prochaine lecture ; aucune lecture en cours n'est interrompue.
+   */
+  async function handlePlaybackModeChange(
+    event: Event & { currentTarget: EventTarget & HTMLSelectElement }
+  ): Promise<void> {
+    const next = event.currentTarget.value as 'embedded' | 'external';
+    const previous = $settings?.playback_mode ?? 'embedded';
+    try {
+      await setPlaybackMode(next);
+      await refreshSettings();
+    } catch (err) {
+      event.currentTarget.value = previous;
+      console.warn('Kyro: échec setPlaybackMode', err);
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // (e) Handler — thème.
   // ---------------------------------------------------------------------------
@@ -592,7 +612,8 @@
           ffprobe_path: null,
           scan_at_startup: false,
           theme: 'adwaita-dark',
-          last_category: null
+          last_category: null,
+          playback_mode: 'embedded' as const
         };
       });
     } catch (err) {
@@ -662,7 +683,34 @@
     </form>
   </article>
 
-  <!-- (b) Lecteur externe --------------------------------------------- -->
+  <!-- (b) Mode de lecture (embedded vs external) --------------------- -->
+  <article
+    class="card"
+    aria-labelledby="playback-mode-heading"
+    data-testid="section-playback-mode"
+  >
+    <h2 id="playback-mode-heading">Mode de lecture</h2>
+    <p class="muted">
+      Choisissez où Kyro doit lire vos fichiers. Le lecteur intégré
+      utilise libmpv embarqué dans Kyro et n'écrit aucune configuration
+      mpv.net globale. Le lecteur externe délègue à l'application
+      configurée ci-dessous (mpv.net par défaut).
+    </p>
+
+    <label class="row">
+      <span>Mode actif</span>
+      <select
+        on:change={handlePlaybackModeChange}
+        value={$settings?.playback_mode ?? 'embedded'}
+        data-testid="select-playback-mode"
+      >
+        <option value="embedded">Lecteur intégré (libmpv)</option>
+        <option value="external">Lecteur externe</option>
+      </select>
+    </label>
+  </article>
+
+  <!-- (b') Lecteur externe -------------------------------------------- -->
   <article
     class="card"
     aria-labelledby="player-heading"

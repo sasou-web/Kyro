@@ -295,6 +295,122 @@ export async function getLastCategory(): Promise<Category | null> {
 }
 
 /**
+ * Enregistre le mode de lecture actif. Valeurs acceptées :
+ * `"embedded"` (player libmpv intégré, défaut) ou `"external"`
+ * (mpv.net ou autre exécutable). Côté backend, l'aiguillage est
+ * réalisé par `commands::playback::play_media` qui lit ce setting
+ * avant chaque démarrage de lecture.
+ */
+export async function setPlaybackMode(
+  mode: 'embedded' | 'external'
+): Promise<void> {
+  return invoke<void>('set_playback_mode', { mode });
+}
+
+/** Retourne le mode de lecture actif, défaut `"embedded"` au premier démarrage. */
+export async function getPlaybackMode(): Promise<'embedded' | 'external'> {
+  return invoke<'embedded' | 'external'>('get_playback_mode');
+}
+
+// ===========================================================================
+// Embedded player — `commands::embedded_player`.
+// ===========================================================================
+
+/**
+ * Démarre une session de lecture dans la fenêtre Tauri `player`.
+ * Pré-condition : la fenêtre `player` doit avoir été créée par le
+ * frontend (`WebviewWindow.getByLabel('player')` ou `new WebviewWindow`)
+ * avant l'invoke.
+ *
+ * Erreurs explicites :
+ * - `playback_mode != "embedded"` → utilisez `playMedia` à la place.
+ * - `libmpv-2.dll` introuvable → bascule recommandée vers `external`.
+ */
+export async function embeddedPlayerOpen(
+  targetId: number,
+  kind: 'media' | 'episode'
+): Promise<void> {
+  return invoke<void>('embedded_player_open', { targetId, kind });
+}
+
+/** Bascule pause / lecture sur la session embarquée courante. */
+export async function embeddedPlayerTogglePause(): Promise<void> {
+  return invoke<void>('embedded_player_toggle_pause');
+}
+
+/** Saute à `positionSeconds` (absolu). */
+export async function embeddedPlayerSeek(
+  positionSeconds: number
+): Promise<void> {
+  return invoke<void>('embedded_player_seek', { positionSeconds });
+}
+
+/** Sélectionne une piste audio. `null` = piste par défaut, `-1` = mute. */
+export async function embeddedPlayerSetAudioTrack(
+  aid: number | null
+): Promise<void> {
+  return invoke<void>('embedded_player_set_audio_track', { aid });
+}
+
+/** Sélectionne une piste sous-titres. `null` ou `-1` = pas de sous-titres. */
+export async function embeddedPlayerSetSubtitleTrack(
+  sid: number | null
+): Promise<void> {
+  return invoke<void>('embedded_player_set_subtitle_track', { sid });
+}
+
+/** Termine la session embarquée courante. */
+export async function embeddedPlayerQuit(): Promise<void> {
+  return invoke<void>('embedded_player_quit');
+}
+
+/**
+ * Repositionne / redimensionne le HWND vidéo dans la fenêtre Kyro.
+ * Coordonnées en **pixels physiques** dans le repère de la fenêtre
+ * `main`. Le frontend doit multiplier les valeurs CSS par
+ * `window.devicePixelRatio` avant l'invoke.
+ */
+export async function embeddedPlayerSetGeometry(
+  x: number,
+  y: number,
+  width: number,
+  height: number
+): Promise<void> {
+  return invoke<void>('embedded_player_set_geometry', { x, y, width, height });
+}
+
+/**
+ * Affiche / masque le HWND vidéo sans détruire la session libmpv.
+ */
+export async function embeddedPlayerSetVisible(visible: boolean): Promise<void> {
+  return invoke<void>('embedded_player_set_visible', { visible });
+}
+
+/** Règle le volume libmpv (0 à 150). 100 = volume nominal. */
+export async function embeddedPlayerSetVolume(volume: number): Promise<void> {
+  return invoke<void>('embedded_player_set_volume', { volume });
+}
+
+/** Mute / unmute. */
+export async function embeddedPlayerSetMute(muted: boolean): Promise<void> {
+  return invoke<void>('embedded_player_set_mute', { muted });
+}
+
+/** Vitesse de lecture (0.1 à 8.0). 1.0 = normale. */
+export async function embeddedPlayerSetSpeed(speed: number): Promise<void> {
+  return invoke<void>('embedded_player_set_speed', { speed });
+}
+
+/**
+ * Retourne la `track-list` mpv au format JSON (string).
+ * Voir https://mpv.io/manual/master/#command-interface-track-list
+ * pour la spec exacte du tableau retourné.
+ */
+export async function embeddedPlayerTrackList(): Promise<string> {
+  return invoke<string>('embedded_player_track_list');
+}
+
+/**
  * Retourne l'agrégat `SettingsSummary` consommé par la page
  * Paramètres (lecture en bloc).
  */

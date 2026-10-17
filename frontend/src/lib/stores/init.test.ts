@@ -49,7 +49,8 @@ describe('initSettings', () => {
       ffprobe_path: null,
       scan_at_startup: true,
       theme: 'adwaita-dark',
-      last_category: 'Films'
+      last_category: 'Films',
+      playback_mode: 'embedded'
     };
     invokeMock.mockResolvedValueOnce(summary);
 

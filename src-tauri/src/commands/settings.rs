@@ -71,7 +71,8 @@ use crate::infra::player_bridge::validate_external_player_path;
 use crate::infra::repo::{FolderId, LibraryFolder, Repo};
 use crate::infra::settings_keys::{
     SETTING_KEY_EXTERNAL_PLAYER_PATH, SETTING_KEY_FFPROBE_PATH,
-    SETTING_KEY_LAST_CATEGORY, SETTING_KEY_SCAN_AT_STARTUP, SETTING_KEY_THEME,
+    SETTING_KEY_LAST_CATEGORY, SETTING_KEY_PLAYBACK_MODE, SETTING_KEY_SCAN_AT_STARTUP,
+    SETTING_KEY_THEME,
 };
 
 // =====================================================================
@@ -93,6 +94,21 @@ const ACCEPTED_THEMES: &[&str] = &[DEFAULT_THEME, ALTERNATE_THEME];
 /// Les valeurs sont strictement celles produites par
 /// [`Category::as_str`] (cohérent avec le `CHECK` SQL et le design).
 const ACCEPTED_CATEGORIES: &[&str] = &["Films", "Series", "Animes"];
+
+/// Valeur **par défaut** du mode de lecture au premier démarrage : la
+/// lecture passe par le player embarqué Kyro (libmpv chargé in-process).
+/// Si `libmpv-2.dll` est absente au moment du `play_media`, le runtime
+/// retourne une erreur explicite et l'utilisateur peut basculer sur
+/// `"external"` depuis Paramètres.
+pub const DEFAULT_PLAYBACK_MODE: &str = "embedded";
+
+/// Mode alternatif : lecture déléguée à l'application externe
+/// configurée par `external_player_path` (mpv.net ou autre). Branche
+/// historique inchangée.
+pub const ALTERNATE_PLAYBACK_MODE: &str = "external";
+
+/// Allowlist des littéraux acceptés pour la clé `playback_mode`.
+const ACCEPTED_PLAYBACK_MODES: &[&str] = &[DEFAULT_PLAYBACK_MODE, ALTERNATE_PLAYBACK_MODE];
 
 // =====================================================================
 // DTO `SettingsSummary` — agrégat lu d'un coup par le frontend.
@@ -129,6 +145,11 @@ pub struct SettingsSummary {
     pub theme: String,
     /// Dernière catégorie consultée (`None` si jamais persistée).
     pub last_category: Option<String>,
+    /// Mode de lecture actif. Toujours présent, défaut `"embedded"`
+    /// (player libmpv intégré). Valeur alternative : `"external"`
+    /// (mpv.net ou autre exécutable défini par
+    /// `external_player_path`).
+    pub playback_mode: String,
 }
 
 /// Projection JSON-friendly de [`LibraryFolder`].
@@ -297,6 +318,34 @@ pub(crate) async fn get_last_category_with(
     repo.get_setting(SETTING_KEY_LAST_CATEGORY).await
 }
 
+/// Helper pure-logique pour `set_playback_mode`. N'accepte que les
+/// littéraux [`DEFAULT_PLAYBACK_MODE`] et [`ALTERNATE_PLAYBACK_MODE`]
+/// — sensible à la casse, cohérent avec le contrat IPC. Les commandes
+/// `play_media` / `play_resume` lisent ce setting pour router entre
+/// `embedded_player::EmbeddedPlayer::open` et `player_bridge::launch_player`.
+pub(crate) async fn set_playback_mode_with(
+    repo: &Repo,
+    mode: &str,
+) -> Result<(), KyroError> {
+    if !ACCEPTED_PLAYBACK_MODES.contains(&mode) {
+        return Err(KyroError::Validation(format!(
+            "mode de lecture inconnu: {mode:?} (attendu: embedded, external)"
+        )));
+    }
+    repo.upsert_setting(SETTING_KEY_PLAYBACK_MODE, mode).await
+}
+
+/// Helper pure-logique pour `get_playback_mode`. Retourne
+/// [`DEFAULT_PLAYBACK_MODE`] si la clé n'est pas encore présente
+/// (cas premier démarrage avant que `init_default_settings` ne
+/// la pose).
+pub(crate) async fn get_playback_mode_with(repo: &Repo) -> Result<String, KyroError> {
+    Ok(repo
+        .get_setting(SETTING_KEY_PLAYBACK_MODE)
+        .await?
+        .unwrap_or_else(|| DEFAULT_PLAYBACK_MODE.to_string()))
+}
+
 /// Helper pure-logique pour `get_settings_summary` — agrège en une
 /// seule opération l'ensemble des paramètres lus séparément ailleurs.
 ///
@@ -317,6 +366,7 @@ pub(crate) async fn get_settings_summary_with(
     };
     let theme = get_theme_with(repo).await?;
     let last_category = get_last_category_with(repo).await?;
+    let playback_mode = get_playback_mode_with(repo).await?;
 
     Ok(SettingsSummary {
         library_folders,
@@ -325,6 +375,7 @@ pub(crate) async fn get_settings_summary_with(
         scan_at_startup,
         theme,
         last_category,
+        playback_mode,
     })
 }
 
@@ -558,6 +609,24 @@ pub async fn get_last_category(
     repo: tauri::State<'_, Repo>,
 ) -> Result<Option<String>, KyroError> {
     get_last_category_with(&repo).await
+}
+
+/// Commande Tauri : enregistre le mode de lecture actif. Valeurs
+/// acceptées : `"embedded"` (player libmpv intégré, défaut) et
+/// `"external"` (mpv.net ou autre via `external_player_path`).
+#[tauri::command]
+pub async fn set_playback_mode(
+    mode: String,
+    repo: tauri::State<'_, Repo>,
+) -> Result<(), KyroError> {
+    set_playback_mode_with(&repo, &mode).await
+}
+
+/// Commande Tauri : retourne le mode de lecture actif, défaut
+/// [`DEFAULT_PLAYBACK_MODE`] si la clé n'a pas encore été posée.
+#[tauri::command]
+pub async fn get_playback_mode(repo: tauri::State<'_, Repo>) -> Result<String, KyroError> {
+    get_playback_mode_with(&repo).await
 }
 
 /// Commande Tauri : retourne l'agrégat [`SettingsSummary`] consommé
@@ -858,6 +927,35 @@ mod tests {
     }
 
     #[test]
+    fn playback_mode_round_trip_each_value_and_default() {
+        block_on(async {
+            let db = TempDir::new().unwrap();
+            let pool = fresh_pool(db.path()).await;
+            let repo = Repo::new(pool);
+
+            // Avant tout `set`, la lecture renvoie le défaut.
+            assert_eq!(
+                get_playback_mode_with(&repo).await.unwrap(),
+                DEFAULT_PLAYBACK_MODE
+            );
+
+            for ok in ["embedded", "external"] {
+                set_playback_mode_with(&repo, ok)
+                    .await
+                    .unwrap_or_else(|_| panic!("mode {ok} doit être accepté"));
+                assert_eq!(get_playback_mode_with(&repo).await.unwrap(), ok);
+            }
+
+            for bogus in ["", "EMBEDDED", "Embedded", "external_player", "mpv"] {
+                let err = set_playback_mode_with(&repo, bogus)
+                    .await
+                    .expect_err("mode inconnu doit être rejeté");
+                assert!(matches!(err, KyroError::Validation(_)));
+            }
+        });
+    }
+
+    #[test]
     fn settings_summary_aggregates_all_keys() {
         block_on(async {
             let db = TempDir::new().unwrap();
@@ -900,6 +998,9 @@ mod tests {
             assert!(s.scan_at_startup);
             assert_eq!(s.theme, "adwaita-light");
             assert_eq!(s.last_category.as_deref(), Some("Series"));
+            // Le mode reste à la valeur par défaut tant que
+            // `set_playback_mode` n'a pas été appelé.
+            assert_eq!(s.playback_mode, DEFAULT_PLAYBACK_MODE);
         });
     }
 
@@ -917,6 +1018,7 @@ mod tests {
             assert!(!s.scan_at_startup);
             assert_eq!(s.theme, DEFAULT_THEME);
             assert!(s.last_category.is_none());
+            assert_eq!(s.playback_mode, DEFAULT_PLAYBACK_MODE);
         });
     }
 

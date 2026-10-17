@@ -49,6 +49,7 @@
 //!   invalides sont journalisées et ignorées.
 
 pub mod backup;
+pub mod embedded_player;
 pub mod ffprobe_locator;
 pub mod ipc_pipe;
 pub mod player_bridge;

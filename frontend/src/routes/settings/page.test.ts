@@ -73,6 +73,7 @@ function summary(overrides: Partial<SettingsSummary> = {}): SettingsSummary {
     scan_at_startup: false,
     theme: 'adwaita-dark',
     last_category: null,
+    playback_mode: 'embedded',
     ...overrides
   };
 }

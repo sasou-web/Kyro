@@ -25,6 +25,7 @@
 //! module se contente d'exposer les fonctions.
 
 pub mod backup;
+pub mod embedded_player;
 pub mod logs;
 pub mod library;
 pub mod playback;

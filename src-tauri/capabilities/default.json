@@ -1,11 +1,14 @@
 {
   "identifier": "default",
-  "description": "Capability par défaut de Kyro : permissions restreintes au strict nécessaire. Seules les permissions core sont activées à la tâche 1.1, plus la permission `dialog:allow-open` ajoutée à la tâche 14.7 pour permettre au composant `<PosterPicker>` d'ouvrir le sélecteur de fichier image natif (Requirements 6.2, 6.3). Les permissions shell (notamment shell:allow-open) NE sont volontairement PAS référencées : shell:open reste désactivé.",
+  "description": "Capability par défaut de Kyro : permissions restreintes au strict nécessaire. La permission `dialog:allow-open` (tâche 14.7) permet au composant <PosterPicker> d'ouvrir le sélecteur de fichier image natif (Requirements 6.2, 6.3). Les permissions `core:webview:default` permettent au frontend de lire des informations sur la WebView principale (utilisé par le player embarqué pour caler le HWND vidéo). Les permissions shell (notamment shell:allow-open) NE sont volontairement PAS référencées : shell:open reste désactivé.",
   "windows": ["main"],
   "permissions": [
     "core:default",
     "core:event:default",
     "core:window:default",
+    "core:window:allow-set-fullscreen",
+    "core:window:allow-is-fullscreen",
+    "core:webview:default",
     "core:app:default",
     "core:path:default",
     "dialog:allow-open"

@@ -83,6 +83,27 @@ unicode-normalization = "=0.1.24"
 dirs = "=5.0.1"
 which = "=6.0.3"
 
+# Chargement dynamique de `libmpv-2.dll` pour le player embarqué
+# (cf. `infra::embedded_player`). Le `default-features = false` exclut
+# le déréférencement d'erreur en mode "errno" qui requiert des features
+# spécifiques aux Unix ; on garde uniquement le minimum cross-target.
+# La DLL elle-même n'est PAS link-time : elle est résolue à l'exécution
+# par `Library::new`, donc l'absence de la DLL au build n'empêche pas
+# la compilation et Kyro reste fonctionnel en mode "external".
+libloading = "=0.8.5"
+
+# Bindings Win32 pour la création / le positionnement du HWND child
+# qui héberge le rendu libmpv. Seules les fonctions strictement
+# nécessaires (Window classes, geometry, parenting) sont activées via
+# les features pour limiter l'empreinte du binaire.
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "=0.58.0", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_System_LibraryLoader",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
 # Logging structuré + RollingFileAppender quotidien (design § Logs).
 tracing = "=0.1.40"
 tracing-subscriber = { version = "=0.3.18", features = ["env-filter", "json"] }

@@ -20,6 +20,9 @@
 # Sidecar ffprobe : binaire LGPL non committé (cf. src-tauri/binaries/README.md)
 /src-tauri/binaries/*.exe
 
+# Sidecar libmpv : DLL LGPL non committée (cf. docs/EMBEDDED_PLAYER.md)
+/src-tauri/binaries/*.dll
+
 # OS / IDE
 .DS_Store
 Thumbs.db
